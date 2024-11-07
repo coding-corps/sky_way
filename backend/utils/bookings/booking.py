@@ -3,11 +3,11 @@ from sqlalchemy.exc import IntegrityError
 import random
 import string
 from users.users import get_user_by_email
-from models import Booking , db, User
+from models import Booking, db, User
 import uuid
-from flask import  jsonify 
+from flask import jsonify
 
- 
+
 def create_booking_entry(owner_id, departure_flight, returning_flight=None, passengers=[]):
     """
     Creates a new booking for a user, associates flights, and passengers.
@@ -18,7 +18,7 @@ def create_booking_entry(owner_id, departure_flight, returning_flight=None, pass
     :param passengers: List of user data dictionaries for passengers (can be empty for just the owner).
     :return: Newly created booking object or an error message.
     """
- 
+
     try:
         # Create a new booking instance
         booking = Booking(
@@ -38,10 +38,9 @@ def create_booking_entry(owner_id, departure_flight, returning_flight=None, pass
                 if existing_passenger:
                     booking.passengers.append(existing_passenger)
                 else:
-                    
+
                     dob_str = passenger.get("dob")
                     dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
-
 
                     # If passenger does not exist, create a new user
                     new_user = User(
@@ -68,6 +67,7 @@ def create_booking_entry(owner_id, departure_flight, returning_flight=None, pass
         db.session.rollback()
         print(f"Unexpected error: {e}")
         return {"error": "An unexpected error occurred during booking creation."}
+
 
 def update_booking(booking_id, departure_flight_id=None, returning_flight_id=None, passengers=[]):
     """
@@ -97,6 +97,7 @@ def update_booking(booking_id, departure_flight_id=None, returning_flight_id=Non
     db.session.commit()
     return booking
 
+
 def pay_booking(booking_id):
     """
     Process payment for a booking and mark it as completed.
@@ -106,10 +107,10 @@ def pay_booking(booking_id):
     """
     booking = Booking.query.get(booking_id)
     if not booking:
-        return {"error": "Booking not found."} , 404
+        return {"error": "Booking not found."}, 404
 
     if booking.payment_received:
-        return {"error": "This booking has already been paid for."} , 409
+        return {"error": "This booking has already been paid for."}, 409
 
     # Process the payment here (e.g., integrate with payment gateway)
     booking.payment_received = datetime.utcnow()
@@ -120,8 +121,7 @@ def pay_booking(booking_id):
         'reference_number': booking.reference_number,
         'status': 'Paid',
         'payment_received': booking.payment_received
-    }) , 200 
-
+    }), 200
 
 
 def get_booking(booking_id=None, reference_number=None):
@@ -144,5 +144,5 @@ def get_booking(booking_id=None, reference_number=None):
     return {"error": "Booking not found."}
 
 
-def generate_reference_number(length=10):
+def generate_reference_number():
     return f"SKY-{uuid.uuid4()}"

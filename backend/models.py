@@ -1,33 +1,46 @@
 from datetime import datetime
 import bcrypt
-from flask_sqlalchemy import SQLAlchemy 
+from flask_sqlalchemy import SQLAlchemy
 import uuid
 
-# Initialize SQLAlchemy
+# Initialize SQLAlchemy instance
 db = SQLAlchemy()
- 
-# Function to generate a default UUID
+
+
 def default_uuid_generator():
-    return str(uuid.uuid4())
+    """
+    Generate a unique identifier (UUID) for new entries.
+
+    UUID (Universally Unique Identifier) is a 128-bit number used to uniquely identify data.
+    This function uses Python's built-in uuid library to generate a random UUID.
+
+    Returns:
+        str: A string representation of the generated UUID.
+    """
+    return str(uuid.uuid4())  # Generate a random UUID and convert it to a string
 
 
-# Define Airport Model
 class Airport(db.Model):
-    __tablename__ = 'airports'
-    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Adjusted size for UUID
-    code = db.Column(db.String(3))  # Airport code (e.g., 'BGI')
-    name = db.Column(db.String, nullable=False)  # Full airport name (e.g., 'Barbados, Grantley Adams Int'l')
+    __tablename__ = 'airports'  # Table name in the database
 
-    # Define relationship to the Flight model for arriving flights
+    # Define columns for the Airport table
+    id = db.Column(db.String(36), primary_key=True,
+                   default=default_uuid_generator)  # UUID primary key with default generator
+    code = db.Column(db.String(3))  # 3-character airport code (e.g., 'BGI')
+    name = db.Column(db.String, nullable=False)  # Full name of the airport (e.g., 'Barbados, Grantley Adams Int'l')
+
+    # Define relationships to the Flight model for arriving flights
     arriving_flights = db.relationship(
         'Flight', backref='arrival_airport_ref', lazy=True,
-        foreign_keys='Flight.arrival_airport_id'
+        foreign_keys='Flight.arrival_airport_id'  # Define foreign key for arriving flights
     )
-    # Define relationship to the Flight model for departing flights
+    # Define relationships to the Flight model for departing flights
     departing_flights = db.relationship(
         'Flight', backref='departure_airport_ref', lazy=True,
-        foreign_keys='Flight.departure_airport_id'
+        foreign_keys='Flight.departure_airport_id'  # Define foreign key for departing flights
     )
+
+    # String representation for debugging
     def __repr__(self):
         return f"Airport(code={self.code}, name={self.name})"
 
@@ -42,35 +55,42 @@ class Airport(db.Model):
         Get a list of all flights departing from this airport.
         """
         return self.departing_flights
-    
+
     def to_dict(self):
+        """
+        Convert the Airport object to a dictionary for easy serialization.
+        """
         return {
             'id': self.id,
             'name': self.name,
             'code': self.code
         }
 
+    # Another string representation for debugging
     def __repr__(self):
         return f'<Airport {self.code}: {self.name} >'
-    
+
+
 class Flight(db.Model):
     __tablename__ = 'flights'
-    
-    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)
+
+    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # UUID primary key
     flight_num = db.Column(db.String(10), unique=True, nullable=False)
-    
-    departure_airport_id = db.Column(db.Integer, db.ForeignKey('airports.id'), nullable=False)
-    arrival_airport_id = db.Column(db.Integer, db.ForeignKey('airports.id'), nullable=False)
-    
-    departure_time = db.Column(db.String(10), nullable=False)
-    arrival_time = db.Column(db.String(10), nullable=False)
+
+    departure_airport_id = db.Column(db.String(36), db.ForeignKey('airports.id'),
+                                     nullable=False)  # Foreign key adjusted to match UUID type
+    arrival_airport_id = db.Column(db.String(36), db.ForeignKey('airports.id'),
+                                   nullable=False)  # Foreign key adjusted to match UUID type
+
+    departure_time = db.Column(db.String(10), nullable=False)  # Time stored in 12-hour format
+    arrival_time = db.Column(db.String(10), nullable=False)  # Time stored in 12-hour format
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships to Airport model with explicit names
+    # Relationships to the Airport model
     departure_airport = db.relationship(
         "Airport",
         foreign_keys=[departure_airport_id],
@@ -81,44 +101,30 @@ class Flight(db.Model):
         foreign_keys=[arrival_airport_id],
         backref=db.backref("flights_arriving", lazy="dynamic")
     )
-    
+
     def duration(self):
         try:
-            # Combine the start_date and departure_time into a single datetime object
-            departure_datetime = datetime.combine(self.start_date, datetime.strptime(self.departure_time, '%I:%M %p').time())
+            # Convert departure and arrival times to datetime objects
+            departure_datetime = datetime.combine(self.start_date,
+                                                  datetime.strptime(self.departure_time, '%I:%M %p').time())
             arrival_datetime = datetime.combine(self.end_date, datetime.strptime(self.arrival_time, '%I:%M %p').time())
-        
-            # Calculate the duration of the flight in hours
+
+            # Calculate duration in hours
             duration = (arrival_datetime - departure_datetime).total_seconds() / 3600  # duration in hours
- 
-            
-            return round(duration, 1)  # Rounded to two decimal places, or use {:.2g} for significant figures
-            
-        
-        
+            return round(duration, 1)  # Rounded to one decimal place
         except Exception as e:
-            arrival_time = datetime.strptime(self.arrival_time, "%Y-%m-%d %H:%M:%S")
-            departure_time = datetime.strptime(self.departure_time, "%Y-%m-%d %H:%M:%S")
+            print(f"Error calculating duration: {e}")
+            return 0  # Return 0 if there is an error
 
-            # Calculate the difference between the two datetime objects
-            time_difference = arrival_time - departure_time
-            difference_in_hours = time_difference.total_seconds() / 3600
-
-            return difference_in_hours 
-        
-    
     def cost(self):
         try:
-            # Calculate the cost (cost per hour = $180)
+            # Cost per hour
             cost = self.duration() * 47
-            
-            # Return the cost as a formatted string with a dollar sign
             return f'${cost:.2f}'
-        
         except Exception as e:
-            cost = 12 * 47
-            return f'${cost:.2f}'
-    
+            print(f"Error calculating cost: {e}")
+            return "$0.00"  # Return a default cost in case of error
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -130,14 +136,16 @@ class Flight(db.Model):
             'start_date': self.start_date,
             'end_date': self.end_date,
             'cost': self.cost(),
-            'duration':self.duration(),
+            'duration': self.duration(),
         }
 
     def __repr__(self):
         return f'<Flight {self.flight_num} from {self.departure_airport.name} to {self.arrival_airport.name}>'
 
+
 class User(db.Model):
     __tablename__ = 'users'
+
     id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)
     password_hash = db.Column(db.String(128))
     first_name = db.Column(db.String(100))
@@ -146,29 +154,59 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True)
     dob = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Method to set hashed password
     def set_password(self, password):
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        """
+        Set the hashed password for the user.
+        """
+        if password:
+            self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            raise ValueError("Password cannot be empty")
 
     # Method to verify password
     def verify_password(self, password):
+        """
+        Verify the password matches the hashed password.
+        """
+        if not self.password_hash:
+            raise ValueError("Password hash not set")
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
     def full_name(self):
+        """
+        Get the full name of the user.
+        """
         return f'{self.first_name} {self.last_name}'
 
     def get_bookings(self):
-        # Retrieve all bookings associated with the user
-        passenger_bookings = Booking.query.join(booking_passenger).filter(booking_passenger.c.user_id == self.id).all()
-        return passenger_bookings
+        """
+        Retrieve all bookings associated with the user.
+        """
+        try:
+            passenger_bookings = Booking.query.join(booking_passenger).filter(
+                booking_passenger.c.user_id == self.id).all()
+            return passenger_bookings
+        except Exception as e:
+            print(f"Error fetching bookings: {e}")
+            return []
 
-    def to_dict(self):
+    def soft_delete(self):
+        """
+        Marks the user as deleted by setting the deleted_at timestamp.
+        """
+        self.deleted_at = datetime.utcnow()
+        db.session.commit()
+
+    def to_dict(self, include_sensitive=False):
         """
         Converts the User instance to a dictionary format.
+        Optionally, excludes sensitive fields like password_hash and deleted_at.
         """
-        return {
+        user_data = {
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
@@ -180,75 +218,127 @@ class User(db.Model):
             "full_name": self.full_name()
         }
 
-         
-         
-booking_passenger = db.Table(
-    'booking_passenger',
-    db.Column('booking_id', db.String(36), db.ForeignKey('bookings.id'), primary_key=True),
-    db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True)
-)
-# Define Booking model
-class Booking(db.Model):
-    __tablename__ = 'bookings'
-    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)
-    reference_number = db.Column(db.String(10), unique=True)
-    owner_id = db.Column(db.String(36), db.ForeignKey('users.id'))
-    departure_flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'), nullable=False)
-    returning_flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    completed = db.Column(db.DateTime)
-    payment_received = db.Column(db.DateTime)
+        if include_sensitive:
+            user_data["password_hash"] = self.password_hash
+            user_data["deleted_at"] = self.deleted_at.isoformat() if self.deleted_at else None
 
-    owner = db.relationship('User', backref='bookings')
-    departure_flight = db.relationship('Flight', foreign_keys=[departure_flight_id], backref='departure_bookings')
-    returning_flight = db.relationship('Flight', foreign_keys=[returning_flight_id], backref='returning_bookings')
-    passengers = db.relationship('User', secondary=booking_passenger, backref='user_bookings')
+        return user_data
 
     def __repr__(self):
+        return f'<User {self.full_name()} ({self.email})>'
+
+
+# Association Table for Many-to-Many Relationship between Booking and User
+booking_passenger = db.Table(
+    'booking_passenger',  # Table name
+    db.Column('booking_id', db.String(36), db.ForeignKey('bookings.id'), primary_key=True),  # Foreign key to Booking
+    db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True)  # Foreign key to User
+)
+
+
+class Booking(db.Model):
+    __tablename__ = 'bookings'  # Table name for this model
+
+    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Primary key, UUID for uniqueness
+    reference_number = db.Column(db.String(10), unique=True)  # Unique booking reference number
+    owner_id = db.Column(db.String(36), db.ForeignKey('users.id'))  # Foreign key to the owner (User)
+    departure_flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'),
+                                    nullable=False)  # Foreign key to Departure Flight
+    returning_flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'),
+                                    nullable=True)  # Foreign key to Return Flight (nullable)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Timestamp when the booking was created
+    completed = db.Column(db.DateTime)  # Timestamp when the booking was completed (nullable)
+    payment_received = db.Column(db.DateTime)  # Timestamp when payment was received (nullable)
+
+    # Relationship to User (owner of the booking)
+    owner = db.relationship('User', backref='bookings')  # One-to-many relationship (one User can own multiple bookings)
+
+    # Relationships to Flight (Departure and Return Flights)
+    departure_flight = db.relationship('Flight', foreign_keys=[departure_flight_id],
+                                       backref='departure_bookings')  # One-to-many with departure flight
+    returning_flight = db.relationship('Flight', foreign_keys=[returning_flight_id],
+                                       backref='returning_bookings')  # One-to-many with return flight
+
+    # Relationship to User (Passengers in the booking)
+    passengers = db.relationship('User', secondary=booking_passenger,
+                                 backref='user_bookings')  # Many-to-many through association table
+
+    def __repr__(self):
+        """
+        Return a string representation of the Booking instance.
+        Shows the reference number, owner, and number of passengers.
+        """
         return f"<Booking reference_number={self.reference_number}, owner={self.owner.full_name()}, passengers={len(self.passengers)}>"
 
     def is_round_trip(self):
+        """
+        Check if the booking is a round trip (i.e., has a return flight).
+        Returns True if there is a returning flight, otherwise False.
+        """
         return self.returning_flight_id is not None
 
     def get_trip_status(self):
-        flight_date = self.departure_flight.start_date if self.departure_flight else None
-        today = datetime.utcnow().date()
+        """
+        Determine the status of the trip based on the departure flight date.
+        Returns:
+            - "future" if the flight is scheduled for a future date.
+            - "current" if the flight is on the current date.
+            - "past" if the flight has already passed.
+            - "unknown" if no flight date is available.
+        """
+        flight_date = self.departure_flight.start_date if self.departure_flight else None  # Get departure date of the flight
+        today = datetime.utcnow().date()  # Get today's date
         if flight_date:
             if flight_date > today:
-                return "future"
+                return "future"  # Trip is scheduled for a future date
             elif flight_date == today:
-                return "current"
+                return "current"  # Trip is happening today
             else:
-                return "past"
-        return "unknown"
+                return "past"  # Trip has already passed
+        return "unknown"  # If no departure flight date, return unknown status
 
     def to_dict(self):
+        """
+        Convert the Booking instance to a dictionary format for easy serialization.
+        Includes details of the owner, flights, trip status, and passengers.
+        """
         return {
-            "id": self.id,
-            "reference_number": self.reference_number,
-            "owner": self.owner.to_dict() if self.owner else None,  # Ensure User model has `to_dict`
+            "id": self.id,  # Booking ID
+            "reference_number": self.reference_number,  # Booking reference number
+            "owner": self.owner.to_dict() if self.owner else None,  # Convert the owner User to a dict
             "departure_flight": self.departure_flight.to_dict() if self.departure_flight else None,
+            # Convert the departure Flight to a dict
             "returning_flight": self.returning_flight.to_dict() if self.returning_flight else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            # Convert the returning Flight to a dict (if exists)
+            "created_at": self.created_at.isoformat() if self.created_at else None,  # Creation timestamp in ISO format
             "completed": self.completed.isoformat() if self.completed else None,
+            # Completion timestamp in ISO format (if exists)
             "payment_received": self.payment_received.isoformat() if self.payment_received else None,
-            "is_round_trip": self.is_round_trip(),
-            "trip_status": self.get_trip_status(),
-            "passengers": [p.to_dict() for p in self.passengers]  # Ensure User model has `to_dict`
+            # Payment received timestamp in ISO format (if exists)
+            "is_round_trip": self.is_round_trip(),  # Check if this is a round trip
+            "trip_status": self.get_trip_status(),  # Get the status of the trip (future, current, past, unknown)
+            "passengers": [p.to_dict() for p in self.passengers]  # List of passengers in the booking, each as a dict
         }
 
-        
+
 class SearchHistory(db.Model):
-    __tablename__ = 'search_history'
-    
-    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)  # Foreign key to User
-    flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'), nullable=False)  # Foreign key to Flight
-    searched_at = db.Column(db.DateTime, default=datetime.utcnow)  # Timestamp for search
+    __tablename__ = 'search_history'  # Table name for this model
+
+    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Primary key (UUID for uniqueness)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)  # Foreign key referencing the User table
+    flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'), nullable=False)  # Foreign key referencing the Flight table
+    searched_at = db.Column(db.DateTime, default=datetime.utcnow)  # Timestamp for when the search was made
     search_count = db.Column(db.Integer, default=1)  # Counter for the number of times this user searched for this flight
 
-    user = db.relationship('User', backref='search_history', lazy=True)
-    flight = db.relationship('Flight', backref='search_history', lazy=True)
+    # Relationship to the User model (One-to-many relationship between User and SearchHistory)
+    user = db.relationship('User', backref='search_history', lazy=True)  # A user can have many search histories
+
+    # Relationship to the Flight model (One-to-many relationship between Flight and SearchHistory)
+    flight = db.relationship('Flight', backref='search_history', lazy=True)  # A flight can have many search histories
 
     def __repr__(self):
+        """
+        Return a string representation of the SearchHistory instance.
+        This representation includes the user ID, flight ID, and search timestamp.
+        """
         return f"SearchHistory(user_id={self.user_id}, flight_id={self.flight_id}, searched_at={self.searched_at})"
