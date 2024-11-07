@@ -91,7 +91,7 @@ export class PaymentInfoComponent implements OnInit {
       this.bookingId = params['bookingId'];
     });
 
-    this.bookingService.viewBookings(null, this.bookingId).subscribe(
+    this.bookingService.viewBookings(null,null, this.bookingId).subscribe(
       (response: Booking[]) => {
         console.log('Booking details:', response);
         this.departure_flight = response[0].departure_flight;

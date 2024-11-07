@@ -361,10 +361,11 @@ def view_bookings():
     """
     # Retrieve email and reference number from the query parameters
     email = request.args.get('email')
+    bookingId = request.args.get('bookingId')
     reference_number = request.args.get('reference_number')
 
     # Validate that at least one of the parameters (email or reference number) is provided
-    if not email and not reference_number:
+    if not email and not reference_number and not bookingId:
         return jsonify({"error": "Email or Reference Number must be provided"}), 400
 
     bookings = []  # List to store the bookings that match the search criteria
@@ -377,8 +378,8 @@ def view_bookings():
         bookings = user.bookings  # Retrieve all bookings for the user
 
     # If reference number is provided, fetch the specific booking by reference number
-    if reference_number:
-        booking = get_booking(None, reference_number=reference_number)  # Retrieve the booking by reference number
+    if bookingId:
+        booking = get_booking(bookingId, reference_number=reference_number)  # Retrieve the booking by reference number
         if booking:
             bookings.append(booking)  # Add the booking to the list
 
