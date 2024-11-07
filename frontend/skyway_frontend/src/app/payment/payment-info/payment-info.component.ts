@@ -128,7 +128,7 @@ export class PaymentInfoComponent implements OnInit {
 
   navigateToConfirmation(bookingId: string) {
     if (bookingId) {
-      this.router.navigate(['/sw/booking/confirmation'], {
+      this.router.navigate(['/sw/booking/confirmation/'+bookingId], {
         queryParams: { bookingId: bookingId }
       });
     } else {
@@ -150,6 +150,10 @@ export class PaymentInfoComponent implements OnInit {
             this.router.navigate(['/sw/login']);
           }
            console.error('Error creating booking:', error);
+          if (error.status=== 409){
+            // already paid
+            this.navigateToConfirmation(this.booking_id);
+          }
           // Handle error gracefully (e.g., show a message to the user)
         }
       );

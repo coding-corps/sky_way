@@ -8,7 +8,6 @@ from datetime import datetime, timedelta  # Add timedelta for time manipulation
 from utils.flights.flights import get_close_flights, get_flight_by_id, save_searched_flight
 from utils.flights.airports import get_all_airports
 from utils.bookings.booking import pay_booking, create_booking_entry, get_booking
-from models import SearchHistory
 
 bp = Blueprint('routes', __name__)
 
@@ -180,7 +179,7 @@ def search_flights():
     guests = request.args.get('guests')  # Number of guests (optional)
 
     # Log the search request for debugging or tracking purposes
-    current_app.logger.info(
+    current_app.logger.debug(
         f"Search request: {departure_city}, {arrival_city}, {departure_date}, {return_date}, {trip_type}, {guests}")
 
     try:
@@ -309,9 +308,10 @@ def create_booking():
             # Create a new return flight if no matching flights are found
 
             # Create a new Flight object for the return flight
+            f_idd = str(uuid.uuid4())
             new_flight = Flight(
-                id=str(uuid.uuid4()),  # Generate a unique ID for the new flight
-                flight_num=f"RF{random.randint(101, 505)}",  # Random flight number for return flight
+                id=f_idd,  # Generate a unique ID for the new flight
+                flight_num=f"RF-{f_idd}",  # Random flight number for return flight
                 departure_airport_id=departure_flight.arrival_airport.id,
                 arrival_airport_id=departure_flight.departure_airport.id,
                 departure_time=(datetime.combine(return_date_obj, datetime.min.time()) + timedelta(hours=1)),

@@ -1,6 +1,5 @@
 from seed_data import seed_data  # Import seed data function to populate the database
 from models import db  # Import the db object from your models
-from flask import current_app
 
 
 def init_db(flask_app):
@@ -37,8 +36,8 @@ def init_db(flask_app):
             # Populate the database with seed data
             seed_data()
 
-        current_app.logger.info("Database initialized and seeded successfully.")
+        print("Database initialized and seeded successfully.")
 
     except Exception as e:
-        current_app.logger.error(f"Error during database initialization: {str(e)}")
+        print(f"Error during database initialization: {str(e)}")
         raise e  # Re-raise the exception after logging it

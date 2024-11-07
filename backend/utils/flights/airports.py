@@ -7,7 +7,7 @@ def get_all_airports():
     Get a list of all airports in the system.
     Excludes any soft-deleted airports and returns the data in a dictionary format.
     """
-    airports = Airport.query.filter_by(deleted_at=None).all()  # Exclude soft-deleted airports
+    airports = Airport.query.all()  # Exclude soft-deleted airports
     return [airport.to_dict() for airport in airports]
 
 
@@ -40,7 +40,6 @@ def get_arrival_airports_for_departing_flights(departing_airport_id):
     # Fetch all unique arrival airports for departing flights from the given airport
     departing_flights = Flight.query.filter_by(
         departure_airport_id=departing_airport_id,
-        deleted_at=None
     ).distinct(Flight.arrival_airport_id).all()  # Use distinct to avoid duplicates
 
     # Ensure that we handle cases where no results are found

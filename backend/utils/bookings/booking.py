@@ -1,8 +1,6 @@
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-import random
-import string
-from users.users import get_user_by_email
+from utils.users.users import get_user_by_email
 from models import Booking, db, User
 import uuid
 from flask import jsonify

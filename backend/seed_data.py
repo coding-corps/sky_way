@@ -141,7 +141,7 @@ def add_flight_data_to_db(airports):
     Logs:
         - Prints success or failure messages for flight insertion.
     """
-    flight_num_counter = 101  # Starting flight number (BW101)
+    flight_num_counter = random.randint(100, 900)  # Starting flight number (BW101)
 
     # Generate all unique airport code pairs using permutations (from_airport -> to_airport)
     airport_pairs = list(itertools.permutations(airports, 2))
@@ -191,11 +191,11 @@ def add_flight_data_to_db(airports):
             added_days = 1  # Ensure at least 1 day gap between start and end date
 
         end_date = start_date + timedelta(days=added_days)  # Random end date (1 to 2 days after start)
-
+        id = str(uuid.uuid4())
         # Create a new Flight entry
         new_flight = Flight(
-            id=str(uuid.uuid4()),  # Generate a unique UUID for the flight
-            flight_num=f"BW{flight_num_counter}",  # Flight number in the format BW101, BW102, etc.
+            id=id,  # Generate a unique UUID for the flight
+            flight_num=f"SKY-{id}",  # Flight number in the format BW101, BW102, etc.
             departure_airport_id=from_airport.id,  # From airport ID
             arrival_airport_id=to_airport.id,     # To airport ID
             departure_time=departure_time.strftime("%I:%M %p"),  # Format as 12-hour time (AM/PM)

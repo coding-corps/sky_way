@@ -39,30 +39,26 @@ def save_searched_flight(user_id, flight_id):
 
     except IntegrityError as e:
         db.session.rollback()
-        current_app.logging.error(f"IntegrityError while saving search history for user {user_id} and flight {flight_id}: {e}")
+        current_app.logging.error(
+            f"IntegrityError while saving search history for user {user_id} and flight {flight_id}: {e}")
         return jsonify({"error": "An integrity error occurred while saving search history."}), 500
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logging.error(f"SQLAlchemyError while saving search history for user {user_id} and flight {flight_id}: {e}")
+        current_app.logging.error(
+            f"SQLAlchemyError while saving search history for user {user_id} and flight {flight_id}: {e}")
         return jsonify({"error": "A database error occurred while saving search history."}), 500
     except Exception as e:
-        current_app.logging.error(f"Unexpected error while saving search history for user {user_id} and flight {flight_id}: {e}")
+        current_app.logging.error(
+            f"Unexpected error while saving search history for user {user_id} and flight {flight_id}: {e}")
         return jsonify({"error": "An unexpected error occurred while saving search history."}), 500
 
 
 def get_close_flights(destination_airport=None, departure_airport=None, departure_date=None):
-    """
-    Get flights based on destination, departure airport, and date range.
-    Searches for flights on the exact date first, then searches ±3 days if no flights are found.
-    """
-    if departure_date is None:
-        return jsonify({"error": "Departure date is required."}), 400
-
-    # Initial search for the exact departure date
+    # Initial search for exact departure date
     flights = get_all_flights(destination_airport, departure_airport, departure_date, departure_date)
 
     if flights:
-        return jsonify([flight.to_dict() for flight in flights]), 200
+        return flights, None, None
     else:
         # Set the range for "close" dates (e.g., ±3 days)
         date_range_days = 3
@@ -73,14 +69,14 @@ def get_close_flights(destination_airport=None, departure_airport=None, departur
             start_date = departure_date_obj - timedelta(days=date_range_days)
             end_date = departure_date_obj + timedelta(days=date_range_days)
         except ValueError:
-            return jsonify({"message": "Invalid date format. Use YYYY-MM-DD."}), 400
+            return None, jsonify({"message": "Invalid date format. Use YYYY-MM-DD."}), 400
 
         # Search for flights within the date range
         flights = get_all_flights(destination_airport, departure_airport, start_date, end_date)
 
         if flights:
-            return jsonify([flight.to_dict() for flight in flights]), 200
-        return jsonify({"message": "No flights found close to the specified date."}), 404
+            return flights, None, None
+        return None, jsonify({"message": "No flights found close to the specified date."}), 404
 
 
 def get_all_flights(to=None, from_airport=None, start_date=None, end_date=None):

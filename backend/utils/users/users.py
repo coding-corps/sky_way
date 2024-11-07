@@ -1,9 +1,8 @@
 from datetime import datetime
 from flask import current_app, jsonify
-from your_app.models import User  # Replace 'your_app' with the actual name of your app module
 from sqlalchemy.exc import SQLAlchemyError  # For database-related exceptions
 from sqlalchemy.orm.exc import NoResultFound  # Specific exception for no results
-from models import db
+from models import db , User
 
 
 def get_user_by_id(user_id):

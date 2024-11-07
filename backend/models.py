@@ -3,6 +3,8 @@ import bcrypt
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 
+from flask import current_app
+
 # Initialize SQLAlchemy instance
 db = SQLAlchemy()
 
@@ -29,15 +31,17 @@ class Airport(db.Model):
     code = db.Column(db.String(3))  # 3-character airport code (e.g., 'BGI')
     name = db.Column(db.String, nullable=False)  # Full name of the airport (e.g., 'Barbados, Grantley Adams Int'l')
 
-    # Define relationships to the Flight model for arriving flights
     arriving_flights = db.relationship(
-        'Flight', backref='arrival_airport_ref', lazy=True,
-        foreign_keys='Flight.arrival_airport_id'  # Define foreign key for arriving flights
+        'Flight',
+        back_populates='arrival_airport',
+        lazy=True,
+        foreign_keys='Flight.arrival_airport_id'
     )
-    # Define relationships to the Flight model for departing flights
     departing_flights = db.relationship(
-        'Flight', backref='departure_airport_ref', lazy=True,
-        foreign_keys='Flight.departure_airport_id'  # Define foreign key for departing flights
+        'Flight',
+        back_populates='departure_airport',
+        lazy=True,
+        foreign_keys='Flight.departure_airport_id'
     )
 
     # String representation for debugging
@@ -91,39 +95,46 @@ class Flight(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships to the Airport model
-    departure_airport = db.relationship(
-        "Airport",
-        foreign_keys=[departure_airport_id],
-        backref=db.backref("flights_departing", lazy="dynamic")
-    )
-    arrival_airport = db.relationship(
-        "Airport",
-        foreign_keys=[arrival_airport_id],
-        backref=db.backref("flights_arriving", lazy="dynamic")
-    )
+
+    departure_airport = db.relationship('Airport', foreign_keys=[departure_airport_id],
+                                        back_populates='departing_flights')
+    arrival_airport = db.relationship('Airport', foreign_keys=[arrival_airport_id], back_populates='arriving_flights')
 
     def duration(self):
         try:
-            # Convert departure and arrival times to datetime objects
+            # Combine the start_date and departure_time into a single datetime object
             departure_datetime = datetime.combine(self.start_date,
                                                   datetime.strptime(self.departure_time, '%I:%M %p').time())
             arrival_datetime = datetime.combine(self.end_date, datetime.strptime(self.arrival_time, '%I:%M %p').time())
 
-            # Calculate duration in hours
+            # Calculate the duration of the flight in hours
             duration = (arrival_datetime - departure_datetime).total_seconds() / 3600  # duration in hours
-            return round(duration, 1)  # Rounded to one decimal place
+
+            return round(duration, 1)  # Rounded to two decimal places, or use {:.2g} for significant figures
+
+
         except Exception as e:
-            print(f"Error calculating duration: {e}")
-            return 0  # Return 0 if there is an error
+            current_app.logger.error(e)
+            arrival_time = datetime.strptime(self.arrival_time, "%Y-%m-%d %H:%M:%S")
+            departure_time = datetime.strptime(self.departure_time, "%Y-%m-%d %H:%M:%S")
+
+            # Calculate the difference between the two datetime objects
+            time_difference = arrival_time - departure_time
+            difference_in_hours = time_difference.total_seconds() / 3600
+
+            return difference_in_hours
 
     def cost(self):
         try:
-            # Cost per hour
+            # Calculate the cost (cost per hour = $180)
             cost = self.duration() * 47
+
+            # Return the cost as a formatted string with a dollar sign
             return f'${cost:.2f}'
+
         except Exception as e:
-            print(f"Error calculating cost: {e}")
-            return "$0.00"  # Return a default cost in case of error
+            cost = 12 * 47
+            return f'${cost:.2f}'
 
     def to_dict(self):
         return {
@@ -325,10 +336,13 @@ class SearchHistory(db.Model):
     __tablename__ = 'search_history'  # Table name for this model
 
     id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Primary key (UUID for uniqueness)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)  # Foreign key referencing the User table
-    flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'), nullable=False)  # Foreign key referencing the Flight table
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'),
+                        nullable=False)  # Foreign key referencing the User table
+    flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'),
+                          nullable=False)  # Foreign key referencing the Flight table
     searched_at = db.Column(db.DateTime, default=datetime.utcnow)  # Timestamp for when the search was made
-    search_count = db.Column(db.Integer, default=1)  # Counter for the number of times this user searched for this flight
+    search_count = db.Column(db.Integer,
+                             default=1)  # Counter for the number of times this user searched for this flight
 
     # Relationship to the User model (One-to-many relationship between User and SearchHistory)
     user = db.relationship('User', backref='search_history', lazy=True)  # A user can have many search histories
