@@ -8,55 +8,51 @@
     <div *ngIf="isLoginMode; else registerTemplate">
         <h2>Login</h2>
         <form class="loginForm"  [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()">
-        <div>
-          <label for="email">Email</label>
-          <input id="email" formControlName="email" type="email" />
+        <div class="input_container">
+           <input id="email" formControlName="email" type="email" placeholder="Email Address"/>
           <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
             <small>Please enter a valid email.</small>
           </div>
         </div>
-  
-        <div>
-          <label for="password">Password</label>
-          <input id="password" formControlName="password" type="password" />
-          <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-            <small>Password must be at least 6 characters.</small>
-          </div>
-        </div>
+          <div class="input_container">
+            <input id="password" formControlName="password" type="password" placeholder="password"/>
+            <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+              <small>Password must be at least 6 characters.</small>
+            </div>
+         </div>
+
+
         <button type="submit" [disabled]="loginForm.invalid">Login</button>
         <button (click)="switchMode()">Don't have an account? Sign Up</button>
 
       </form>
 
     </div>
-  
+
     <ng-template #registerTemplate>
       <h2>Create Account</h2>
       <form  class="signupForm"  [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()">
-        <div>
-          <label for="name">Name</label>
-          <input id="name" formControlName="name" type="text" />
+        <div class="input_container">
+           <input id="name" formControlName="name" type="text" placeholder="Name" />
           <div *ngIf="registerForm.get('name')?.invalid && registerForm.get('name')?.touched">
             <small>Please enter your name.</small>
           </div>
         </div>
-  
-        <div>
-          <label for="email">Email</label>
-          <input id="email" formControlName="email" type="email" />
+
+        <div class="input_container">
+           <input id="email" formControlName="email" type="email" placeholder="email"/>
           <div *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
             <small>Please enter a valid email.</small>
           </div>
         </div>
-  
-        <div>
-          <label for="password">Password</label>
-          <input id="password" formControlName="password" type="password" />
+
+        <div class="input_container">
+           <input id="password" formControlName="password" type="password" placeholder="Please enter a password"/>
           <div *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
             <small>Password must be at least 6 characters.</small>
           </div>
         </div>
-  
+
         <button type="submit" [disabled]="registerForm.invalid">Create Account</button>
         <button (click)="switchMode()">Already have an account? Login</button>
 
@@ -66,4 +62,3 @@
 
 
 </div>
-  
