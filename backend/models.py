@@ -335,24 +335,26 @@ class Booking(db.Model):
 class SearchHistory(db.Model):
     __tablename__ = 'search_history'  # Table name for this model
 
-    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Primary key (UUID for uniqueness)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'),
-                        nullable=False)  # Foreign key referencing the User table
-    flight_id = db.Column(db.String(36), db.ForeignKey('flights.id'),
-                          nullable=False)  # Foreign key referencing the Flight table
-    searched_at = db.Column(db.DateTime, default=datetime.utcnow)  # Timestamp for when the search was made
-    search_count = db.Column(db.Integer,
-                             default=1)  # Counter for the number of times this user searched for this flight
+    id = db.Column(db.String(36), primary_key=True, default=default_uuid_generator)  # Unique ID for each search
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)  # Reference to the user
+    departure_city = db.Column(db.String(100)   )  # Departure city
+    arrival_city = db.Column(db.String(100)   )  # Arrival city
+    departure_date = db.Column(db.DateTime )  # Departure date
+    return_date = db.Column(db.DateTime )  # Return date (optional)
+    trip_type = db.Column(db.String(20) )  # Trip type (e.g., "Roundtrip" or "One-way")
+    guests = db.Column(db.Integer, nullable=False, default=1)  # Number of guests
+    searched_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  # Timestamp for the search
 
-    # Relationship to the User model (One-to-many relationship between User and SearchHistory)
-    user = db.relationship('User', backref='search_history', lazy=True)  # A user can have many search histories
-
-    # Relationship to the Flight model (One-to-many relationship between Flight and SearchHistory)
-    flight = db.relationship('Flight', backref='search_history', lazy=True)  # A flight can have many search histories
-
-    def __repr__(self):
-        """
-        Return a string representation of the SearchHistory instance.
-        This representation includes the user ID, flight ID, and search timestamp.
-        """
-        return f"SearchHistory(user_id={self.user_id}, flight_id={self.flight_id}, searched_at={self.searched_at})"
+    def to_dict(self):
+        """Helper method to convert a search record to a dictionary."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'departure_city': self.departure_city,
+            'arrival_city': self.arrival_city,
+            'departure_date': self.departure_date,
+            'return_date': self.return_date,
+            'trip_type': self.trip_type,
+            'guests': self.guests,
+            'searched_at': self.searched_at
+        }

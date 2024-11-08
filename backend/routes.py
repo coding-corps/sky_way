@@ -1,11 +1,11 @@
 # routes.py
 from flask import Blueprint, request, jsonify, current_app, abort
-from models import db, Flight, User
+from models import db, Flight, User, SearchHistory
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import uuid
 import random
 from datetime import datetime, timedelta  # Add timedelta for time manipulation
-from utils.flights.flights import get_close_flights, get_flight_by_id, save_searched_flight
+from utils.flights.flights import get_close_flights, get_recent_searches, get_flight_by_id, save_searched_flight
 from utils.flights.airports import get_all_airports
 from utils.bookings.booking import pay_booking, create_booking_entry, get_booking
 
@@ -177,10 +177,30 @@ def search_flights():
     return_date = request.args.get('return')  # Return date (optional, for round trips)
     trip_type = request.args.get('type')  # Trip type (e.g., "Roundtrip" or "One-way")
     guests = request.args.get('guests')  # Number of guests (optional)
+    recent = request.args.get('recent')  # Number of guests (optional)
+    user_id = get_jwt_identity()
+
+    if recent:
+        current_app.logger.debug("returning recently searched flights")
+        return get_search_history(user_id)
 
     # Log the search request for debugging or tracking purposes
     current_app.logger.debug(
         f"Search request: {departure_city}, {arrival_city}, {departure_date}, {return_date}, {trip_type}, {guests}")
+    # Save the search to the database
+    user_id = get_jwt_identity()
+
+    search = SearchHistory(
+        user_id=user_id,
+        departure_city=departure_city,
+        arrival_city=arrival_city,
+        departure_date=departure_date,
+        return_date=return_date,
+        trip_type=trip_type,
+        guests=guests
+    )
+    db.session.add(search)
+    db.session.commit()
 
     try:
         # Fetch the available outgoing flights based on the search parameters
@@ -225,29 +245,40 @@ def search_flights():
         return jsonify({"error": "Error processing flight search"}), 500
 
 
-@bp.route('/add_to_search_history/<flight_id>', methods=['POST'])
-@jwt_required()  # Requires JWT authentication to access this route
-def add_to_search_history(flight_id):
+def get_search_history(user_id):
     """
-    Adds a flight to the search history of the authenticated user.
-    This will create a new entry in the SearchHistory table if it doesn't exist
-    or increment the search count if the user has already searched for this flight.
+    Retrieves the search history of the authenticated user along with flight results.
     """
     # Get the user ID from the JWT token
-    user_id = get_jwt_identity()
+    searched = []  # Initialize an empty list for all searches
 
-    # Retrieve the user and flight objects from the database
-    user = User.query.get(user_id)
-    flight = Flight.query.get(flight_id)
+    # Get recent searches from the database
+    searches = get_recent_searches(user_id)
+    current_app.logger.debug(
+        f'found past searches{searches}'
+    )
+    # Loop through each search record
+    for search in searches:
+        if search.arrival_city or search.departure_city:
+            found_flights, error_msg, err_code = get_close_flights(
+                destination_airport=search.arrival_city,
+                departure_airport=search.departure_city,
+                departure_date=search.departure_date
+            )
 
-    # Check if both the user and the flight exist
-    if not user:
-        return jsonify({"message": "User not found."}), 404
-    if not flight:
-        return jsonify({"message": "Flight not found."}), 404
+            if error_msg:
+                # Skip this search but could log the error if necessary
+                continue
 
-    # Check if the flight has already been searched by the user
-    return save_searched_flight(user_id, flight_id)
+            # Add the flights to the searched list
+            searched.extend([flight.to_dict() for flight in found_flights])
+
+    # Prepare the response data
+    response_data = {
+        'outgoing_flights': searched
+    }
+
+    return jsonify(response_data)
 
 
 ###################################################
@@ -412,6 +443,5 @@ def pay_for_booking():
 
     # Call the external payment handler function to process the payment for the booking
     return pay_booking(booking_id)  # Return the result of the payment processing
-
 
 ###################################################

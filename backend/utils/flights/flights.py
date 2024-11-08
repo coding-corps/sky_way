@@ -115,3 +115,8 @@ def get_all_flights(to=None, from_airport=None, start_date=None, end_date=None):
     # Execute the query and return the result
     flights = query.all()
     return flights
+
+
+def get_recent_searches(user_id):
+    searches = SearchHistory.query.filter_by(user_id=user_id).order_by(SearchHistory.searched_at.desc()).limit(5).all()
+    return searches

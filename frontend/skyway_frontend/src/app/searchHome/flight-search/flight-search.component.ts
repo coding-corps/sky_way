@@ -66,7 +66,7 @@ export class FlightSearchComponent implements OnInit {
     const selectedFrom = this.options.find(option => option.name === this.flightSearchForm.value.from);
     const selectedTo = this.options.find(option => option.name === this.flightSearchForm.value.to);
 
-    
+
      const queryParams = {
       type: this.selectedOption,
       from: selectedFrom ? selectedFrom.code : '', // Set 'code' for 'from'
@@ -81,6 +81,6 @@ export class FlightSearchComponent implements OnInit {
    }
 
   navigateToResent() {
-    this.router.navigate(['sw/explore'], { queryParams: { resent: true } });
+    this.router.navigate(['sw/explore'], { queryParams: { recent: true } });
   }
 }
