@@ -180,6 +180,14 @@ def search_flights():
     recent = request.args.get('recent')  # Number of guests (optional)
     user_id = get_jwt_identity()
 
+    if departure_date:
+        departure_date = datetime.strptime(request.args.get('depart'), '%Y-%m-%d').date() if request.args.get(
+            'depart') else None
+
+    if return_date:
+        return_date = datetime.strptime(request.args.get('return'), '%Y-%m-%d').date() if request.args.get(
+            'return') else None
+
     if recent:
         current_app.logger.debug("returning recently searched flights")
         return get_search_history(user_id)
