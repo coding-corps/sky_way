@@ -4,10 +4,11 @@ from models import db, Flight, User, SearchHistory
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import uuid
 import random
-from datetime import datetime, timedelta  # Add timedelta for time manipulation
+from datetime import timedelta  # Add timedelta for time manipulation
 from utils.flights.flights import get_close_flights, get_recent_searches, get_flight_by_id, save_searched_flight
 from utils.flights.airports import get_all_airports
 from utils.bookings.booking import pay_booking, create_booking_entry, get_booking
+from datetime import datetime, date
 
 bp = Blueprint('routes', __name__)
 
@@ -180,13 +181,12 @@ def search_flights():
     recent = request.args.get('recent')  # Number of guests (optional)
     user_id = get_jwt_identity()
 
-    if departure_date:
-        departure_date = datetime.strptime(request.args.get('depart'), '%Y-%m-%d').date() if request.args.get(
-            'depart') else None
-
-    if return_date:
-        return_date = datetime.strptime(request.args.get('return'), '%Y-%m-%d').date() if request.args.get(
-            'return') else None
+    def parse_date(date_str):
+        if isinstance(date_str, str):
+            return datetime.strptime(date_str, '%Y-%m-%d').date()
+        elif isinstance(date_str, date):
+            return date_str  # Already a date object
+        return None  # Return None if the date_str is None or invalid
 
     if recent:
         current_app.logger.debug("returning recently searched flights")
@@ -202,11 +202,15 @@ def search_flights():
         user_id=user_id,
         departure_city=departure_city,
         arrival_city=arrival_city,
-        departure_date=departure_date,
-        return_date=return_date,
         trip_type=trip_type,
         guests=guests
     )
+    if departure_date:
+        search.departure_date = parse_date(departure_date)
+
+    if return_date:
+        search.return_date = parse_date(return_date)
+
     db.session.add(search)
     db.session.commit()
 
