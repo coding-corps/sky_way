@@ -38,7 +38,7 @@ def create_booking_entry(owner_id, departure_flight, returning_flight=None, pass
                 else:
 
                     dob_str = passenger.get("dob")
-                    dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
+                    dob = datetime.strptime(str(dob_str)[:10], '%Y-%m-%d').date() if dob_str else None
 
                     # If passenger does not exist, create a new user
                     new_user = User(

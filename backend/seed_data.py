@@ -167,7 +167,7 @@ def add_flight_data_to_db(airports):
 
         # Convert to a datetime object using 12-hour format
         try:
-            departure_time = datetime.strptime(departure_time_str, "%I:%M %p")
+            departure_time = datetime.strptime(str(departure_time_str)[:10], "%I:%M %p")
         except ValueError as ve:
             # Handle invalid time format and skip this flight
             print(f"Error parsing time '{departure_time_str}': {ve}")

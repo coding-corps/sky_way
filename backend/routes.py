@@ -183,7 +183,7 @@ def search_flights():
 
     def parse_date(date_str):
         if isinstance(date_str, str):
-            return datetime.strptime(date_str, '%Y-%m-%d').date()
+            return datetime.strptime(date_str[:10], '%Y-%m-%d').date()
         elif isinstance(date_str, date):
             return date_str  # Already a date object
         return None  # Return None if the date_str is None or invalid
@@ -277,9 +277,10 @@ def get_search_history(user_id):
                 departure_airport=search.departure_city,
                 departure_date=search.departure_date
             )
-
             if error_msg:
-                # Skip this search but could log the error if necessary
+                current_app.logger.error(
+                    f'error found {error_msg}'
+                )
                 continue
 
             # Add the flights to the searched list
@@ -333,7 +334,7 @@ def create_booking():
     returning_flight = None
     if return_date:
         # Convert the return date from string to a date object
-        return_date_obj = datetime.strptime(return_date, "%Y-%m-%d").date()
+        return_date_obj = datetime.strptime(str(return_date)[:10], "%Y-%m-%d").date()
 
         # Attempt to find available return flights for the user
         returning_flights, error_msg, err_code = get_close_flights(

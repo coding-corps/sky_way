@@ -115,8 +115,8 @@ class Flight(db.Model):
 
         except Exception as e:
             current_app.logger.error(e)
-            arrival_time = datetime.strptime(self.arrival_time, "%Y-%m-%d %H:%M:%S")
-            departure_time = datetime.strptime(self.departure_time, "%Y-%m-%d %H:%M:%S")
+            arrival_time = datetime.strptime(str(self.arrival_time)[:10], "%Y-%m-%d %H:%M:%S")
+            departure_time = datetime.strptime(str(self.departure_time)[:10], "%Y-%m-%d %H:%M:%S")
 
             # Calculate the difference between the two datetime objects
             time_difference = arrival_time - departure_time
@@ -358,3 +358,6 @@ class SearchHistory(db.Model):
             'guests': self.guests,
             'searched_at': self.searched_at
         }
+
+    def __repr__(self):
+        return f'<SearchHistory {self.departure_city} to {self.arrival_city}>'

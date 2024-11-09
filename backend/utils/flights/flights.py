@@ -55,6 +55,11 @@ def save_searched_flight(user_id, flight_id):
 
 def get_close_flights(destination_airport=None, departure_airport=None, departure_date=None):
     # Initial search for exact departure date
+
+    if departure_date:
+
+        departure_date = datetime.strptime(str(departure_date)[:10], '%Y-%m-%d')
+
     flights = get_all_flights(destination_airport, departure_airport, departure_date, departure_date)
 
     if flights:
@@ -65,7 +70,7 @@ def get_close_flights(destination_airport=None, departure_airport=None, departur
 
         # Parse the departure date and calculate the date range
         try:
-            departure_date_obj = datetime.strptime(departure_date, '%Y-%m-%d')
+            departure_date_obj = datetime.strptime(str(departure_date)[:10], '%Y-%m-%d')
             start_date = departure_date_obj - timedelta(days=date_range_days)
             end_date = departure_date_obj + timedelta(days=date_range_days)
         except ValueError:
