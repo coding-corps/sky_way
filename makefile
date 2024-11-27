@@ -18,18 +18,11 @@ setup-venv:
 install:
 	@echo "Installing Flask and dependencies..."
 	@venv/bin/pip install -r requirements.txt
-	@echo "Checking if Angular CLI is installed..."
-	@if ! command -v ng &> /dev/null; then \
-		echo "Angular CLI not found. Installing Angular CLI..."; \
-		npm install -g @angular/cli; \
-	else \
-		echo "Angular CLI already installed."; \
-	fi
-	@echo "Building Angular project..."
+	@sudo npm install -g @angular/cli;
 	cd $(ANGULAR_PROJECT_DIR) && ng build --configuration production
 	@echo "Copying built files to Flask static directory..."
-	mkdir -p $(STATIC_DIR)
-	cp -r $(ANGULAR_PROJECT_DIR)/dist/skyway_frontend/* $(STATIC_DIR)/
+	sudo mkdir -p $(STATIC_DIR)
+	sudo cp -r $(ANGULAR_PROJECT_DIR)/dist/skyway_frontend/* $(STATIC_DIR)/
 	@echo "finished copying"
 
 serve:
